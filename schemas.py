@@ -1,48 +1,55 @@
 """
-Database Schemas
+Database Schemas for OTT Platform
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in MongoDB (collection name is the lowercase of the class name).
 """
-
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional, Literal, Dict
+from datetime import datetime
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
+class Content(BaseModel):
     """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Movies/Series content metadata
+    Collection: "content"
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    title: str = Field(..., description="Title of the content")
+    type: Literal["movie", "series"] = Field(..., description="Content type")
+    description: Optional[str] = Field(None)
+    year: Optional[int] = Field(None)
+    genres: List[str] = Field(default_factory=list)
+    maturity_rating: Optional[str] = Field(None)
+    duration_minutes: Optional[int] = Field(None, description="For movies")
+    seasons: Optional[int] = Field(None, description="For series")
+    episodes: Optional[List[Dict]] = Field(default=None, description="List of episodes with {season, episode, title, duration}")
+    poster_url: Optional[str] = Field(None)
+    backdrop_url: Optional[str] = Field(None)
+    trailer_url: Optional[str] = Field(None)
+    stream_url: Optional[str] = Field(None, description="HLS/DASH URL for adaptive streaming")
+    tags: List[str] = Field(default_factory=list)
+    popularity: int = Field(0, description="Rolling popularity score")
 
-class Product(BaseModel):
+class Userprofile(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    User profile & settings
+    Collection: "userprofile"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    user_id: str = Field(..., description="Firebase auth uid or email")
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    favorites: List[str] = Field(default_factory=list, description="List of content _id strings")
+    watch_history: List[Dict] = Field(default_factory=list, description="Recent watches: {content_id, position, completed, last_watched_at}")
+    created_at: Optional[datetime] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Watchevent(BaseModel):
+    """
+    Watch telemetry events
+    Collection: "watchevent"
+    """
+    user_id: str
+    content_id: str
+    position_seconds: int = 0
+    duration_seconds: Optional[int] = None
+    completed: bool = False
+    device: Optional[str] = None
+    network: Optional[str] = None
+    created_at: Optional[datetime] = None
